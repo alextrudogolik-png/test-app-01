@@ -47,10 +47,10 @@
     </div>
 
     <div class="days-container" id="days-wrapper">
-        </div>
+    </div>
 
     <div class="slots-grid" id="slots-wrapper">
-        </div>
+    </div>
 
     <button id="send" disabled>Подтвердить запись</button>
 
@@ -58,26 +58,25 @@
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Конфигурация шага времени (Инженерные настройки)
-        const WORK_START = 9;  // Час начала работы клиники
-        const WORK_END = 18;  // Час окончания работы
-        const SLOT_DURATION = 30; // Длительность приема в минутах
+        const WORK_START = 9;  
+        const WORK_END = 18;  
+        const SLOT_DURATION = 30; 
 
-        let currentMonday = getMonday(new Date()); // Храним понедельник текущей отображаемой недели
-        let selectedDateStr = null; // Выбранный день (ГГГГ-ММ-ДД)
-        let selectedTimeStr = null; // Выбранное время (ЧЧ:ММ)
+        let currentMonday = getMonday(new Date()); 
+        let selectedDateStr = null; 
+        let selectedTimeStr = null; 
 
-        let bookedSlots = []; // Изначально список пуст
+        let bookedSlots = []; 
 
-        // Функция, которая лезет в Make за реальными данными
         async function loadBookedSlots() {
-            const WEBHOOK_URL = 'https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4';
+            // Добавляем к URL обманку ?_=временная_метка, чтобы обойти жесткий кэш Телеграма и лимиты Make
+            const cacheBuster = Date.now();
+            const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
             
             try {
                 let response = await fetch(WEBHOOK_URL);
                 let data = await response.json();
                 
-                // Записываем прилетевшие из таблицы даты в наш массив
                 if (data && data.booked) {
                     bookedSlots = data.booked;
                 }
@@ -85,17 +84,12 @@
                 console.error("Ошибка загрузки занятых слотов:", error);
             }
             
-            // Перерисовываем неделю уже с учетом реальных занятых мест
             renderWeek(currentMonday);
         }
 
-        // Запускаем загрузку сразу при старте формы
         loadBookedSlots();
-
-        // Инициализация интерфейса
         renderWeek(currentMonday);
 
-        // Навигация по неделям
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
             renderWeek(currentMonday);
@@ -106,14 +100,12 @@
             renderWeek(currentMonday);
         });
 
-        // Функция поиска понедельника для любой даты
         function getMonday(d) {
             d = new Date(d);
             let day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
             return new Date(d.setDate(diff));
         }
 
-        // Рендеринг дней недели (6 рабочих дней: Пн-Сб)
         function renderWeek(monday) {
             const wrapper = document.getElementById('days-wrapper');
             wrapper.innerHTML = '';
@@ -121,11 +113,10 @@
             const daysNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
             let tempDate = new Date(monday);
 
-            // Выводим текущий месяц и год в навигацию
             document.getElementById('current-month').innerText = tempDate.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
 
             for (let i = 0; i < 6; i++) {
-                let dateStr = tempDate.toISOString().split('T')[0]; // Формат YYYY-MM-DD
+                let dateStr = tempDate.toISOString().split('T')[0]; 
                 let dateNum = tempDate.getDate();
 
                 let dayCard = document.createElement('div');
@@ -141,7 +132,7 @@
                     document.querySelectorAll('.day-card').forEach(c => c.classList.remove('selected'));
                     dayCard.classList.add('selected');
                     selectedDateStr = dateStr;
-                    selectedTimeStr = null; // Сбрасываем время при смене дня
+                    selectedTimeStr = null; 
                     document.getElementById('send').disabled = true;
                     renderSlots(dateStr);
                 });
@@ -149,11 +140,9 @@
                 wrapper.appendChild(dayCard);
                 tempDate.setDate(tempDate.getDate() + 1);
             }
-            // Очищаем сетку слотов при переключении недели
             document.getElementById('slots-wrapper').innerHTML = '';
         }
 
-        // Рендеринг 30-минутных слотов для выбранного дня
         function renderSlots(dateStr) {
             const wrapper = document.getElementById('slots-wrapper');
             wrapper.innerHTML = '';
@@ -161,7 +150,7 @@
             let totalMinutes = (WORK_END - WORK_START) * 60;
             let steps = totalMinutes / SLOT_DURATION;
 
-            // Берём текущую дату и время для проверки "прошлого"
+            // Жестко берем текущее локальное время устройства без ISO-сдвигов
             let now = new Date();
 
             for (let i = 0; i < steps; i++) {
@@ -169,7 +158,6 @@
                 let hours = Math.floor(currentMinutes / 60);
                 let minutes = currentMinutes % 60;
 
-                // Красивое форматирование времени (например, 09:30)
                 let timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
                 let fullDateTimeStr = `${dateStr} ${timeStr}`;
 
@@ -177,19 +165,20 @@
                 slotBtn.className = 'slot-btn';
                 slotBtn.innerText = timeStr;
 
-                // Создаем объект даты для конкретно этого проверяемого слота
-                let slotDateTime = new Date(`${dateStr}T${timeStr}`);
+                // Парсим дату и время слота строго по локальному времени смартфона
+                let [year, month, day] = dateStr.split('-').map(Number);
+                let slotDateTime = new Date(year, month - 1, day, hours, minutes, 0);
 
-                // 1. Проверка на прошедшее время
+                // 1. Проверка на прошедшее время (сравниваем чистые локальные объекты)
                 if (slotDateTime < now) {
                     slotBtn.classList.add('booked');
-                    slotBtn.style.opacity = '0.4'; // Делаем его бледным
+                    slotBtn.style.opacity = '0.4'; 
                 } 
-                // 2. Проверка на занятость в базе Гугл Таблиц
+                // 2. Проверка на занятость в базе
                 else if (bookedSlots.includes(fullDateTimeStr)) {
                     slotBtn.classList.add('booked');
                 } 
-                // 3. Если слот свободный и в будущем — открываем доступ
+                // 3. Свободный слот
                 else {
                     if (selectedTimeStr === timeStr) slotBtn.classList.add('selected');
 
@@ -197,8 +186,6 @@
                         document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
                         slotBtn.classList.add('selected');
                         selectedTimeStr = timeStr;
-                        
-                        // Активируем кнопку отправки, так как всё заполнено
                         document.getElementById('send').disabled = false;
                     });
                 }
@@ -208,15 +195,30 @@
 
         // Отправка данных
         document.getElementById('send').addEventListener('click', () => {
+            let speciesVal = document.getElementById('species').value.trim();
+            let nameVal = document.getElementById('name').value.trim();
+            let issueVal = document.getElementById('issue').value.trim();
+
+            // Валидация через системный tg.showAlert, чтобы не блокировалась клавиатура
+            if(nameVal.length < 2) { 
+                tg.showAlert("Имя слишком короткое! Введите корректное имя питомца."); 
+                return; 
+            }
+            if(!speciesVal || !issueVal) {
+                tg.showAlert("Пожалуйста, заполните все поля формы.");
+                return;
+            }
+            if(!selectedDateStr || !selectedTimeStr) { 
+                tg.showAlert("Выберите дату и время!"); 
+                return; 
+            }
+
             let data = {
-                species: document.getElementById('species').value,
-                name: document.getElementById('name').value,
-                issue: document.getElementById('issue').value,
-                time: `${selectedDateStr} ${selectedTimeStr}` // Передаем итоговую дату и время строкой
+                species: speciesVal,
+                name: nameVal,
+                issue: issueVal,
+                time: `${selectedDateStr} ${selectedTimeStr}` 
             };
-            
-            if(data.name.length < 2) { alert("Имя слишком короткое"); return; }
-            if(!selectedDateStr || !selectedTimeStr) { alert("Выберите дату и время!"); return; }
 
             tg.sendData(JSON.stringify(data));
             tg.close();
