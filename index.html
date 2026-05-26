@@ -52,10 +52,6 @@
     <div class="slots-grid" id="slots-wrapper">
     </div>
 
-    <div style="text-align: center; margin-bottom: 15px;">
-        <a href="#" id="refresh-slots" style="color: var(--tg-theme-link-color); font-size: 0.9em; text-decoration: none; font-weight: bold;">🔄 Обновить свободное время</a>
-    </div>
-
     <button id="send" disabled>Подтвердить запись</button>
 
     <script>
@@ -72,40 +68,26 @@
 
         let bookedSlots = []; 
 
-        async function loadBookedSlots() {
-            const cacheBuster = Date.now();
-            const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
-            
+        // Функция парсит занятые даты прямо из URL-адреса ссылки
+        function loadBookedSlots() {
             try {
-                let response = await fetch(WEBHOOK_URL);
-                let data = await response.json();
+                const urlParams = new URLSearchParams(window.location.search);
+                const bookedParam = urlParams.get('booked'); 
                 
-                if (data && data.booked) {
-                    bookedSlots = data.booked;
+                if (bookedParam) {
+                    // Разбираем строку через запятую и превращаем подчеркивания обратно в пробелы
+                    bookedSlots = bookedParam.split(',').map(slot => slot.replace('_', ' '));
                 }
             } catch (error) {
-                console.error("Ошибка загрузки занятых слотов:", error);
+                console.error("Ошибка разбора дат из URL:", error);
             }
             
             renderWeek(currentMonday);
         }
 
-        // Запуск при старте
+        // Инициализация интерфейса при старте
         loadBookedSlots();
         renderWeek(currentMonday);
-
-        // Системный стук по кэшу Telegram Web App
-        if (tg.onEvent) {
-            tg.onEvent('viewActivated', () => {
-                loadBookedSlots();
-            });
-        }
-
-        // Ручной клик по кнопке обновления
-        document.getElementById('refresh-slots').addEventListener('click', (e) => {
-            e.preventDefault();
-            loadBookedSlots();
-        });
 
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
