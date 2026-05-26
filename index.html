@@ -52,6 +52,9 @@
     <div class="slots-grid" id="slots-wrapper">
     </div>
 
+    <div style="text-align: center; margin-bottom: 15px;">
+    <a href="#" id="refresh-slots" style="color: var(--tg-theme-link-color); font-size: 0.9em; text-decoration: none;">🔄 Обновить свободное время</a>
+</div>
     <button id="send" disabled>Подтвердить запись</button>
 
     <script>
@@ -90,10 +93,13 @@
 loadBookedSlots();
 renderWeek(currentMonday);
 
-// 2. ПОДСТРАХОВКА ДЛЯ КЭША: пинаем вебхук заново, когда юзер тыкает в первое поле
-document.getElementById('species').addEventListener('focus', () => {
-    loadBookedSlots();
-});
+// 2. СИСТЕМНЫЙ СТУК ПО КЭШУ: заставляем Телеграм принудительно обновлять базу
+// каждый раз, когда окно Web App снова становится активным на экране
+if (tg.onEvent) {
+    tg.onEvent('viewActivated', () => {
+        loadBookedSlots();
+    });
+}
 
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
@@ -201,6 +207,10 @@ document.getElementById('species').addEventListener('focus', () => {
             }
         }
 
+        document.getElementById('refresh-slots').addEventListener('click', (e) => {
+    e.preventDefault();
+    loadBookedSlots();
+});
         // Отправка данных
         document.getElementById('send').addEventListener('click', () => {
             let speciesVal = document.getElementById('species').value.trim();
