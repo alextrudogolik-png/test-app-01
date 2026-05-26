@@ -73,7 +73,6 @@
         let bookedSlots = []; 
 
         async function loadBookedSlots() {
-            // Твой вебхук с защитой от кэширования
             const cacheBuster = Date.now();
             const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
             
@@ -88,18 +87,16 @@
                 console.error("Ошибка загрузки занятых слотов:", error);
             }
             
-            // Если выбран день, сразу перерисовываем его слоты, иначе неделю
+            // Исправленная логика: обновляем сетку дней, но не затираем слоты, если день уже выбран
+            renderWeek(currentMonday);
             if (selectedDateStr) {
                 renderSlots(selectedDateStr);
-            } else {
-                renderWeek(currentMonday);
             }
         }
 
-        // Запуск при старте
+        // Старт при запуске
         loadBookedSlots();
 
-        // Ручной клик по кнопке обновления теперь ГАРАНТИРОВАННО обновит экран
         document.getElementById('refresh-slots').addEventListener('click', (e) => {
             e.preventDefault();
             loadBookedSlots();
@@ -108,11 +105,13 @@
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
             renderWeek(currentMonday);
+            document.getElementById('slots-wrapper').innerHTML = '';
         });
 
         document.getElementById('next-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() + 7);
             renderWeek(currentMonday);
+            document.getElementById('slots-wrapper').innerHTML = '';
         });
 
         function getMonday(d) {
@@ -159,7 +158,6 @@
                 wrapper.appendChild(dayCard);
                 tempDate.setDate(tempDate.getDate() + 1);
             }
-            document.getElementById('slots-wrapper').innerHTML = '';
         }
 
         function renderSlots(dateStr) {
