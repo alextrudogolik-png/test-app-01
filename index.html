@@ -52,10 +52,6 @@
     <div class="slots-grid" id="slots-wrapper">
     </div>
 
-    <div style="text-align: center; margin-bottom: 15px;">
-        <button id="refresh-page" style="background: none; border: none; color: var(--tg-theme-link-color); font-size: 0.9em; cursor: pointer; font-weight: bold;">🔄 Перезагрузить форму (если нет подсветки)</button>
-    </div>
-
     <button id="send" disabled>Подтвердить запись</button>
 
     <script>
@@ -73,7 +69,6 @@
         let bookedSlots = []; 
 
         async function loadBookedSlots() {
-            // Чтобы пробить кэш Make, добавляем случайный хвост
             const cacheBuster = Date.now();
             const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
             
@@ -94,14 +89,8 @@
             }
         }
 
-        // Первичный старт
+        // Запуск загрузки при старте формы
         loadBookedSlots();
-
-        // Жёсткая перезагрузка страницы браузера по клику на кнопку
-        document.getElementById('refresh-page').addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.reload(true);
-        });
 
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
