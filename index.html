@@ -86,8 +86,14 @@
             renderWeek(currentMonday);
         }
 
-        loadBookedSlots();
-        renderWeek(currentMonday);
+        // 1. Пытаемся загрузить сразу при старте (для первого нормального открытия)
+loadBookedSlots();
+renderWeek(currentMonday);
+
+// 2. ПОДСТРАХОВКА ДЛЯ КЭША: пинаем вебхук заново, когда юзер тыкает в первое поле
+document.getElementById('species').addEventListener('focus', () => {
+    loadBookedSlots();
+});
 
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
