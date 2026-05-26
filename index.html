@@ -53,7 +53,7 @@
     </div>
 
     <div style="text-align: center; margin-bottom: 15px;">
-        <button id="refresh-slots" style="background: none; border: none; color: var(--tg-theme-link-color); font-size: 0.9em; cursor: pointer; font-weight: bold;">🔄 Обновить свободное время</button>
+        <button id="refresh-page" style="background: none; border: none; color: var(--tg-theme-link-color); font-size: 0.9em; cursor: pointer; font-weight: bold;">🔄 Перезагрузить форму (если нет подсветки)</button>
     </div>
 
     <button id="send" disabled>Подтвердить запись</button>
@@ -73,6 +73,7 @@
         let bookedSlots = []; 
 
         async function loadBookedSlots() {
+            // Чтобы пробить кэш Make, добавляем случайный хвост
             const cacheBuster = Date.now();
             const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
             
@@ -87,19 +88,19 @@
                 console.error("Ошибка загрузки занятых слотов:", error);
             }
             
-            // Исправленная логика: обновляем сетку дней, но не затираем слоты, если день уже выбран
             renderWeek(currentMonday);
             if (selectedDateStr) {
                 renderSlots(selectedDateStr);
             }
         }
 
-        // Старт при запуске
+        // Первичный старт
         loadBookedSlots();
 
-        document.getElementById('refresh-slots').addEventListener('click', (e) => {
+        // Жёсткая перезагрузка страницы браузера по клику на кнопку
+        document.getElementById('refresh-page').addEventListener('click', (e) => {
             e.preventDefault();
-            loadBookedSlots();
+            window.location.reload(true);
         });
 
         document.getElementById('prev-week').addEventListener('click', () => {
