@@ -53,8 +53,9 @@
     </div>
 
     <div style="text-align: center; margin-bottom: 15px;">
-    <a href="#" id="refresh-slots" style="color: var(--tg-theme-link-color); font-size: 0.9em; text-decoration: none;">🔄 Обновить свободное время</a>
-</div>
+        <a href="#" id="refresh-slots" style="color: var(--tg-theme-link-color); font-size: 0.9em; text-decoration: none; font-weight: bold;">🔄 Обновить свободное время</a>
+    </div>
+
     <button id="send" disabled>Подтвердить запись</button>
 
     <script>
@@ -89,17 +90,22 @@
             renderWeek(currentMonday);
         }
 
-        // 1. Пытаемся загрузить сразу при старте (для первого нормального открытия)
-loadBookedSlots();
-renderWeek(currentMonday);
-
-// 2. СИСТЕМНЫЙ СТУК ПО КЭШУ: заставляем Телеграм принудительно обновлять базу
-// каждый раз, когда окно Web App снова становится активным на экране
-if (tg.onEvent) {
-    tg.onEvent('viewActivated', () => {
+        // Запуск при старте
         loadBookedSlots();
-    });
-}
+        renderWeek(currentMonday);
+
+        // Системный стук по кэшу Telegram Web App
+        if (tg.onEvent) {
+            tg.onEvent('viewActivated', () => {
+                loadBookedSlots();
+            });
+        }
+
+        // Ручной клик по кнопке обновления
+        document.getElementById('refresh-slots').addEventListener('click', (e) => {
+            e.preventDefault();
+            loadBookedSlots();
+        });
 
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
@@ -127,7 +133,6 @@ if (tg.onEvent) {
             document.getElementById('current-month').innerText = tempDate.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
 
             for (let i = 0; i < 6; i++) {
-                // Наша исправленная локальная сборка даты
                 let year = tempDate.getFullYear();
                 let month = (tempDate.getMonth() + 1).toString().padStart(2, '0');
                 let day = tempDate.getDate().toString().padStart(2, '0');
@@ -207,10 +212,6 @@ if (tg.onEvent) {
             }
         }
 
-        document.getElementById('refresh-slots').addEventListener('click', (e) => {
-    e.preventDefault();
-    loadBookedSlots();
-});
         // Отправка данных
         document.getElementById('send').addEventListener('click', () => {
             let speciesVal = document.getElementById('species').value.trim();
