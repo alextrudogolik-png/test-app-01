@@ -67,32 +67,30 @@
         let selectedDateStr = null; // Выбранный день (ГГГГ-ММ-ДД)
         let selectedTimeStr = null; // Выбранное время (ЧЧ:ММ)
 
-        // Имитация занятых слотов (Сюда потом будут прилетать реальные данные из Гугл Таблицы)
-        // Формат: "ГГГГ-ММ-ДД ЧЧ:ММ"
-       let bookedSlots = []; // Изначально список пуст
+        let bookedSlots = []; // Изначально список пуст
 
-// Функция, которая лезет в Make за реальными данными
-async function loadBookedSlots() {
-    const WEBHOOK_URL = 'https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4';
-    
-    try {
-        let response = await fetch(WEBHOOK_URL);
-        let data = await response.json();
-        
-        // Записываем прилетевшие из таблицы даты в наш массив
-        if (data && data.booked) {
-            bookedSlots = data.booked;
+        // Функция, которая лезет в Make за реальными данными
+        async function loadBookedSlots() {
+            const WEBHOOK_URL = 'https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4';
+            
+            try {
+                let response = await fetch(WEBHOOK_URL);
+                let data = await response.json();
+                
+                // Записываем прилетевшие из таблицы даты в наш массив
+                if (data && data.booked) {
+                    bookedSlots = data.booked;
+                }
+            } catch (error) {
+                console.error("Ошибка загрузки занятых слотов:", error);
+            }
+            
+            // Перерисовываем неделю уже с учетом реальных занятых мест
+            renderWeek(currentMonday);
         }
-    } catch (error) {
-        console.error("Ошибка загрузки занятых слотов:", error);
-    }
-    
-    // Перерисовываем неделю уже с учетом реальных занятых мест
-    renderWeek(currentMonday);
-}
 
-// Запускаем загрузку сразу при старте формы
-loadBookedSlots();
+        // Запускаем загрузку сразу при старте формы
+        loadBookedSlots();
 
         // Инициализация интерфейса
         renderWeek(currentMonday);
@@ -163,6 +161,9 @@ loadBookedSlots();
             let totalMinutes = (WORK_END - WORK_START) * 60;
             let steps = totalMinutes / SLOT_DURATION;
 
+            // Берём текущую дату и время для проверки "прошлого"
+            let now = new Date();
+
             for (let i = 0; i < steps; i++) {
                 let currentMinutes = (WORK_START * 60) + (i * SLOT_DURATION);
                 let hours = Math.floor(currentMinutes / 60);
@@ -176,10 +177,20 @@ loadBookedSlots();
                 slotBtn.className = 'slot-btn';
                 slotBtn.innerText = timeStr;
 
-                // Проверка: занято ли это время в нашей базе данных
-                if (bookedSlots.includes(fullDateTimeStr)) {
+                // Создаем объект даты для конкретно этого проверяемого слота
+                let slotDateTime = new Date(`${dateStr}T${timeStr}`);
+
+                // 1. Проверка на прошедшее время
+                if (slotDateTime < now) {
                     slotBtn.classList.add('booked');
-                } else {
+                    slotBtn.style.opacity = '0.4'; // Делаем его бледным
+                } 
+                // 2. Проверка на занятость в базе Гугл Таблиц
+                else if (bookedSlots.includes(fullDateTimeStr)) {
+                    slotBtn.classList.add('booked');
+                } 
+                // 3. Если слот свободный и в будущем — открываем доступ
+                else {
                     if (selectedTimeStr === timeStr) slotBtn.classList.add('selected');
 
                     slotBtn.addEventListener('click', () => {
