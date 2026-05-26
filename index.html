@@ -69,11 +69,30 @@
 
         // Имитация занятых слотов (Сюда потом будут прилетать реальные данные из Гугл Таблицы)
         // Формат: "ГГГГ-ММ-ДД ЧЧ:ММ"
-        let bookedSlots = [
-            "2026-05-26 10:00",
-            "2026-05-26 10:30",
-            "2026-05-27 14:30"
-        ];
+       let bookedSlots = []; // Изначально список пуст
+
+// Функция, которая лезет в Make за реальными данными
+async function loadBookedSlots() {
+    const WEBHOOK_URL = 'https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4';
+    
+    try {
+        let response = await fetch(WEBHOOK_URL);
+        let data = await response.json();
+        
+        // Записываем прилетевшие из таблицы даты в наш массив
+        if (data && data.booked) {
+            bookedSlots = data.booked;
+        }
+    } catch (error) {
+        console.error("Ошибка загрузки занятых слотов:", error);
+    }
+    
+    // Перерисовываем неделю уже с учетом реальных занятых мест
+    renderWeek(currentMonday);
+}
+
+// Запускаем загрузку сразу при старте формы
+loadBookedSlots();
 
         // Инициализация интерфейса
         renderWeek(currentMonday);
