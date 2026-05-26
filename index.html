@@ -52,6 +52,10 @@
     <div class="slots-grid" id="slots-wrapper">
     </div>
 
+    <div style="text-align: center; margin-bottom: 15px;">
+        <button id="refresh-slots" style="background: none; border: none; color: var(--tg-theme-link-color); font-size: 0.9em; cursor: pointer; font-weight: bold;">🔄 Обновить свободное время</button>
+    </div>
+
     <button id="send" disabled>Подтвердить запись</button>
 
     <script>
@@ -68,26 +72,38 @@
 
         let bookedSlots = []; 
 
-        // Функция парсит занятые даты прямо из URL-адреса ссылки
-        function loadBookedSlots() {
+        async function loadBookedSlots() {
+            // Твой вебхук с защитой от кэширования
+            const cacheBuster = Date.now();
+            const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
+            
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const bookedParam = urlParams.get('booked'); 
+                let response = await fetch(WEBHOOK_URL);
+                let data = await response.json();
                 
-                if (bookedParam) {
-                    // Разбираем строку через запятую и превращаем подчеркивания обратно в пробелы
-                    bookedSlots = bookedParam.split(',').map(slot => slot.replace('_', ' '));
+                if (data && data.booked) {
+                    bookedSlots = data.booked;
                 }
             } catch (error) {
-                console.error("Ошибка разбора дат из URL:", error);
+                console.error("Ошибка загрузки занятых слотов:", error);
             }
             
-            renderWeek(currentMonday);
+            // Если выбран день, сразу перерисовываем его слоты, иначе неделю
+            if (selectedDateStr) {
+                renderSlots(selectedDateStr);
+            } else {
+                renderWeek(currentMonday);
+            }
         }
 
-        // Инициализация интерфейса при старте
+        // Запуск при старте
         loadBookedSlots();
-        renderWeek(currentMonday);
+
+        // Ручной клик по кнопке обновления теперь ГАРАНТИРОВАННО обновит экран
+        document.getElementById('refresh-slots').addEventListener('click', (e) => {
+            e.preventDefault();
+            loadBookedSlots();
+        });
 
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
@@ -170,16 +186,13 @@
                 let [year, month, day] = dateStr.split('-').map(Number);
                 let slotDateTime = new Date(year, month - 1, day, hours, minutes, 0);
 
-                // 1. Проверка на прошедшее время
                 if (slotDateTime < now) {
                     slotBtn.classList.add('booked');
                     slotBtn.style.opacity = '0.4'; 
                 } 
-                // 2. Проверка на занятость в базе
                 else if (bookedSlots.includes(fullDateTimeStr)) {
                     slotBtn.classList.add('booked');
                 } 
-                // 3. Свободный слот
                 else {
                     if (selectedTimeStr === timeStr) slotBtn.classList.add('selected');
 
@@ -194,7 +207,6 @@
             }
         }
 
-        // Отправка данных
         document.getElementById('send').addEventListener('click', () => {
             let speciesVal = document.getElementById('species').value.trim();
             let nameVal = document.getElementById('name').value.trim();
