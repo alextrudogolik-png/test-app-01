@@ -68,24 +68,29 @@
 
         let bookedSlots = []; 
 
-        async function loadBookedSlots() {
-            // Добавляем к URL обманку ?_=временная_метка, чтобы обойти жесткий кэш Телеграма и лимиты Make
-            const cacheBuster = Date.now();
-            const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
-            
-            try {
-                let response = await fetch(WEBHOOK_URL);
-                let data = await response.json();
-                
-                if (data && data.booked) {
-                    bookedSlots = data.booked;
-                }
-            } catch (error) {
-                console.error("Ошибка загрузки занятых слотов:", error);
-            }
-            
-            renderWeek(currentMonday);
+   async function loadBookedSlots() {
+    const cacheBuster = Date.now();
+    const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
+    
+    let debugField = document.getElementById('issue'); // Будем писать логи в поле "Что случилось"
+    
+    try {
+        let response = await fetch(WEBHOOK_URL);
+        let data = await response.json();
+        
+        if (data && data.booked) {
+            bookedSlots = data.booked;
+            debugField.value = `Успех! Прилетел массив: ${JSON.stringify(bookedSlots)}`;
+        } else {
+            debugField.value = `Бэкенд ответил, но поле booked пустое: ${JSON.stringify(data)}`;
         }
+    } catch (error) {
+        console.error("Ошибка загрузки занятых слотов:", error);
+        debugField.value = `Сетевая ошибка запроса: ${error.message}`;
+    }
+    
+    renderWeek(currentMonday);
+}
 
         loadBookedSlots();
         renderWeek(currentMonday);
