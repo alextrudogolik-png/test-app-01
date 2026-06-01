@@ -69,6 +69,7 @@
         let bookedSlots = []; 
 
         async function loadBookedSlots() {
+            // Добавляем к URL обманку ?_=временная_метка, чтобы обойти жесткий кэш Телеграма и лимиты Make
             const cacheBuster = Date.now();
             const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
             
@@ -84,24 +85,19 @@
             }
             
             renderWeek(currentMonday);
-            if (selectedDateStr) {
-                renderSlots(selectedDateStr);
-            }
         }
 
-        // Запуск загрузки при старте формы
         loadBookedSlots();
+        renderWeek(currentMonday);
 
         document.getElementById('prev-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() - 7);
             renderWeek(currentMonday);
-            document.getElementById('slots-wrapper').innerHTML = '';
         });
 
         document.getElementById('next-week').addEventListener('click', () => {
             currentMonday.setDate(currentMonday.getDate() + 7);
             renderWeek(currentMonday);
-            document.getElementById('slots-wrapper').innerHTML = '';
         });
 
         function getMonday(d) {
@@ -120,11 +116,7 @@
             document.getElementById('current-month').innerText = tempDate.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
 
             for (let i = 0; i < 6; i++) {
-                let year = tempDate.getFullYear();
-                let month = (tempDate.getMonth() + 1).toString().padStart(2, '0');
-                let day = tempDate.getDate().toString().padStart(2, '0');
-                let dateStr = `${year}-${month}-${day}`; 
-
+                let dateStr = tempDate.toISOString().split('T')[0]; 
                 let dateNum = tempDate.getDate();
 
                 let dayCard = document.createElement('div');
@@ -148,6 +140,7 @@
                 wrapper.appendChild(dayCard);
                 tempDate.setDate(tempDate.getDate() + 1);
             }
+            document.getElementById('slots-wrapper').innerHTML = '';
         }
 
         function renderSlots(dateStr) {
@@ -157,6 +150,7 @@
             let totalMinutes = (WORK_END - WORK_START) * 60;
             let steps = totalMinutes / SLOT_DURATION;
 
+            // Жестко берем текущее локальное время устройства без ISO-сдвигов
             let now = new Date();
 
             for (let i = 0; i < steps; i++) {
@@ -171,16 +165,20 @@
                 slotBtn.className = 'slot-btn';
                 slotBtn.innerText = timeStr;
 
+                // Парсим дату и время слота строго по локальному времени смартфона
                 let [year, month, day] = dateStr.split('-').map(Number);
                 let slotDateTime = new Date(year, month - 1, day, hours, minutes, 0);
 
+                // 1. Проверка на прошедшее время (сравниваем чистые локальные объекты)
                 if (slotDateTime < now) {
                     slotBtn.classList.add('booked');
                     slotBtn.style.opacity = '0.4'; 
                 } 
+                // 2. Проверка на занятость в базе
                 else if (bookedSlots.includes(fullDateTimeStr)) {
                     slotBtn.classList.add('booked');
                 } 
+                // 3. Свободный слот
                 else {
                     if (selectedTimeStr === timeStr) slotBtn.classList.add('selected');
 
@@ -195,11 +193,13 @@
             }
         }
 
+        // Отправка данных
         document.getElementById('send').addEventListener('click', () => {
             let speciesVal = document.getElementById('species').value.trim();
             let nameVal = document.getElementById('name').value.trim();
             let issueVal = document.getElementById('issue').value.trim();
 
+            // Валидация через системный tg.showAlert, чтобы не блокировалась клавиатура
             if(nameVal.length < 2) { 
                 tg.showAlert("Имя слишком короткое! Введите корректное имя питомца."); 
                 return; 
