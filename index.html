@@ -116,7 +116,12 @@
             document.getElementById('current-month').innerText = tempDate.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
 
             for (let i = 0; i < 6; i++) {
-                let dateStr = tempDate.toISOString().split('T')[0]; 
+                // ФИКС: Собираем дату YYYY-MM-DD строго по локальному времени устройства, без ISO-сдвигов
+                let yyyy = tempDate.getFullYear();
+                let mm = String(tempDate.getMonth() + 1).padStart(2, '0');
+                let dd = String(tempDate.getDate()).padStart(2, '0');
+                let dateStr = `${yyyy}-${mm}-${dd}`; 
+                
                 let dateNum = tempDate.getDate();
 
                 let dayCard = document.createElement('div');
