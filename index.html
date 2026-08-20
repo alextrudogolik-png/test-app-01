@@ -30,6 +30,12 @@
 <body>
     <h3>Запись на прием</h3>
     
+    <label>Ваше имя и фамилия</label>
+    <input type="text" id="client_name" placeholder="Как к вам обращаться?" required>
+
+    <label>Номер телефона</label>
+    <input type="tel" id="client_phone" placeholder="+380..." required>
+
     <label>Вид животного (например, Крыса)</label>
     <input type="text" id="species" placeholder="Кто у вас?" required>
 
@@ -69,7 +75,6 @@
         let bookedSlots = []; 
 
         async function loadBookedSlots() {
-            // Добавляем к URL обманку ?_=временная_метка, чтобы обойти жесткий кэш Телеграма и лимиты Make
             const cacheBuster = Date.now();
             const WEBHOOK_URL = `https://hook.eu1.make.com/mlhj3c3qstea64qcrrbunx559hmbgwa4?_=${cacheBuster}`;
             
@@ -116,7 +121,6 @@
             document.getElementById('current-month').innerText = tempDate.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
 
             for (let i = 0; i < 6; i++) {
-                // ФИКС: Собираем дату YYYY-MM-DD строго по локальному времени устройства, без ISO-сдвигов
                 let yyyy = tempDate.getFullYear();
                 let mm = String(tempDate.getMonth() + 1).padStart(2, '0');
                 let dd = String(tempDate.getDate()).padStart(2, '0');
@@ -155,7 +159,6 @@
             let totalMinutes = (WORK_END - WORK_START) * 60;
             let steps = totalMinutes / SLOT_DURATION;
 
-            // Жестко берем текущее локальное время устройства без ISO-сдвигов
             let now = new Date();
 
             for (let i = 0; i < steps; i++) {
@@ -170,20 +173,16 @@
                 slotBtn.className = 'slot-btn';
                 slotBtn.innerText = timeStr;
 
-                // Парсим дату и время слота строго по локальному времени смартфона
                 let [year, month, day] = dateStr.split('-').map(Number);
                 let slotDateTime = new Date(year, month - 1, day, hours, minutes, 0);
 
-                // 1. Проверка на прошедшее время (сравниваем чистые локальные объекты)
                 if (slotDateTime < now) {
                     slotBtn.classList.add('booked');
                     slotBtn.style.opacity = '0.4'; 
                 } 
-                // 2. Проверка на занятость в базе
                 else if (bookedSlots.includes(fullDateTimeStr)) {
                     slotBtn.classList.add('booked');
                 } 
-                // 3. Свободный слот
                 else {
                     if (selectedTimeStr === timeStr) slotBtn.classList.add('selected');
 
@@ -200,11 +199,21 @@
 
         // Отправка данных
         document.getElementById('send').addEventListener('click', () => {
+            let clientNameVal = document.getElementById('client_name').value.trim();
+            let clientPhoneVal = document.getElementById('client_phone').value.trim();
             let speciesVal = document.getElementById('species').value.trim();
             let nameVal = document.getElementById('name').value.trim();
             let issueVal = document.getElementById('issue').value.trim();
 
-            // Валидация через системный tg.showAlert, чтобы не блокировалась клавиатура
+            // Валидация
+            if(clientNameVal.length < 2) { 
+                tg.showAlert("Пожалуйста, введите ваше имя."); 
+                return; 
+            }
+            if(clientPhoneVal.length < 7) { 
+                tg.showAlert("Пожалуйста, введите корректный номер телефона."); 
+                return; 
+            }
             if(nameVal.length < 2) { 
                 tg.showAlert("Имя слишком короткое! Введите корректное имя питомца."); 
                 return; 
@@ -219,6 +228,8 @@
             }
 
             let data = {
+                client_name: clientNameVal,
+                client_phone: clientPhoneVal,
                 species: speciesVal,
                 name: nameVal,
                 issue: issueVal,
