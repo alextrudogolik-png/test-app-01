@@ -63,6 +63,11 @@
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
+        const urlParams = new URLSearchParams(window.location.search);
+const phoneFromUrl = urlParams.get('phone');
+if (phoneFromUrl) {
+    document.getElementById('client_phone').value = phoneFromUrl;
+}
 
         const WORK_START = 9;  
         const WORK_END = 18;  
